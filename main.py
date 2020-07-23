@@ -4,7 +4,6 @@ import paddle.fluid as fluid
 import numpy as np
 import math
 import csv
-import paddle.dataset.mnist as mnist
 
 ITERABLE = True
 PLACE = fluid.cuda_places(0)
@@ -12,7 +11,7 @@ DATA = []
 RES = []
 FILE = "./iris.data"
 SAVE_PATH = "./params"
-
+prediction = None
 def data_pretreatment():
     with open(FILE) as f:
         render = csv.reader(f)
@@ -45,7 +44,8 @@ def network():
 data_pretreatment()
 train_prog = fluid.Program()
 train_startup = fluid.Program()
-
+INPUT = fluid.data(name='input', shape=[None, 4], dtype='float32')
+LABEL = fluid.data(name='label', shape=[None, 1], dtype='int64')
 with fluid.program_guard(train_prog, train_startup):
     with fluid.unique_name.guard():
         train_loss, train_loader, acc = network()
@@ -63,7 +63,6 @@ with fluid.program_guard(test_prog, test_startup):
 
 place = fluid.CUDAPlace(0)
 exe = fluid.Executor(place)
-# 运行startup_program进行初始化
 exe.run(train_startup)
 exe.run(test_startup)
 
@@ -83,7 +82,9 @@ for epoch_id in range(10):
     print("----train start----")
     run_iterable(train_prog, exe, train_loss, train_loader, acc)
     param_path = "./my_paddle_model"
-    fluid.io.save_params(executor=exe, dirname=param_path, main_program=train_startup)
+    # fluid.io.save_params(executor=exe, dirname=param_path, main_program=train_startup)
+    # print(type(prediction))
+    fluid.io.save_inference_model(SAVE_PATH, ['input'], [prediction], exe)
     print("----test start----")
     run_iterable(test_prog, exe, test_loss, test_loader, acc)
 
